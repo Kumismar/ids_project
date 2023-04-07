@@ -156,7 +156,7 @@ values ('020412/9371', 'Honza Zeleny', to_date('22.4.1966', 'dd.mm.yyyy'), 'muz'
 insert into Ridic
 values ('641108/4783', 'Petr Bezejmenny', to_date('22.4.1999', 'dd.mm.yyyy'), 'muz', 4, 'cze', 'Adamov');
 insert into Ridic
-values ('901231/1209', 'Andrea Oranzova', to_date('22.7.2003', 'dd.mm.yyyy'), 'zena', 2, 'pol', 'Krakow');
+values ('901231/1209', 'Andrea Lmaoxdova', to_date('22.7.2003', 'dd.mm.yyyy'), 'zena', 2, 'pol', 'Krakow');
 
 /**
   Zavaznosti:
@@ -206,7 +206,9 @@ values ('4Y1SL65848Z411439', '1B10000', 'kamion', 'volvo', 'favorit', '1348', 'f
 insert into NekradeneVozidlo
 values ('4JGDA5HB2EA287176', '2A22222', 'traktor', 'toyota', 'octavia', '1945', 'azurova', 'man', to_date('13.4.1918', 'dd.mm.yyyy'), 'elektrina', 20, '990101/0110');
 insert into NekradeneVozidlo
-values ('JT3GN86RXT0035545', '3c33333', 'motorka', 'lamborghini', 'pickup', '1234', 'tyrkysova', 'aut', to_date('19/12/1939', 'dd.mm.yyyy'), 'hnede uhli', 69420, '660101/0112');
+values ('JN8AS5MT8EW670601', '2A22236', 'skateboard', 'tatra', 'aventador', '3001', 'azurova', 'man', to_date('14.7.3005', 'dd.mm.yyyy'), 'antihmota', 20, '990101/0110');
+insert into NekradeneVozidlo
+values ('JT3GN86RXT0035545', '3c33333', 'traktor', 'lamborghini', 'pickup', '1234', 'tyrkysova', 'aut', to_date('19/12/1939', 'dd.mm.yyyy'), 'hnede uhli', 69420, '660101/0112');
 insert into NekradeneVozidlo
 values ('1B3ES26C45D159621', '8b41234', 'osobni auto', 'skoda', 'fabie', '2002', 'zluta', 'aut', to_date('19/12/2003', 'dd.mm.yyyy'), 'LPG', 2000, '020412/9371');
 insert into NekradeneVozidlo
@@ -277,7 +279,7 @@ select kategorie, druh
 from Prestupek join Ridic using (rodne_cislo_ridice)
 where misto_narozeni ='Adamov';
 
-/* Najdi vsechna kradena vozidla a jmena vlastniku, ktera byla kradena v Adamove a jejichz vlastnici se narodili v Adamove */
+/* Najdi vsechna kradena vozidla a jmena jejich vlastniku, ktera byla kradena v Adamove a jejichz vlastnici se narodili v Adamove */
 select typ_vozidla, vyrobce, model, jmeno_prijmeni
 from KradeneVozidlo v, Ridic r
 where v.rodne_cislo_vlastnika = r.rodne_cislo_ridice and
@@ -288,16 +290,42 @@ select distinct typ_opravneni
 from RidicskeOpravneni join RidicskyPrukaz using(cislo_ridicskeho_prukazu) join Ridic using (rodne_cislo_ridice)
 where misto_narozeni = 'Adamov';
 
-/* Najdi vsechny prestupky, ktere byly spachany ridicem, ktery vlastni vozidlo na hnede uhli */
-
 /* Kolik maji dohromady nasbirano bodu lide z ruznych mest */
-select misto_narozeni, sum(pocet_bodu) as pb
+select misto_narozeni, sum(pocet_bodu) as soucet_bodu
 from Ridic
 group by misto_narozeni
-order by pb desc;
+order by soucet_bodu desc;
 
 /* Vypis, kolik nekradenych vozidel jezdi na ktera paliva */
-select palivo, count(*) pocet
+select palivo, count(*) pocet_vozidel
 from NekradeneVozidlo v, Ridic r
 where v.rodne_cislo_vlastnika = r.rodne_cislo_ridice
 group by palivo;
+
+/* Kteri ridici vlastni traktor? */
+select distinct jmeno_prijmeni
+from NekradeneVozidlo v, Ridic r
+where v.rodne_cislo_vlastnika = r.rodne_cislo_ridice and
+      typ_vozidla =  'traktor';     --tento select je zde jen aby byl videt rozdil vysledku mezi timto a nasledujicim dotazem
+
+/* Kteri ridic vlastni pouze traktor? */
+select distinct jmeno_prijmeni
+from NekradeneVozidlo v, Ridic r
+where v.rodne_cislo_vlastnika = r.rodne_cislo_ridice and
+      typ_vozidla = 'traktor' and
+      not exists (select *
+                  from NekradeneVozidlo v
+                  where r.rodne_cislo_ridice = v.rodne_cislo_vlastnika and
+                        v.typ_vozidla <> 'traktor');
+
+/* Kteri ridici spachali prestupek kategorie "nejzavaznejsi"? */
+select jmeno_prijmeni, pohlavi, misto_narozeni
+from Ridic
+where rodne_cislo_ridice in
+      (select rodne_cislo_ridice
+       from Prestupek
+       where kategorie = 'Nejzavaznejsi');
+
+
+/* Najdi vsechny prestupky, ktere byly spachany ridicem, ktery vlastni vozidlo na hnede uhli */
+
