@@ -250,6 +250,7 @@ insert into RidicskeOpravneni values ('EE hahaha', 'C1E');
 
 insert into RidicskeOpravneni values ('EO hehehe', 'B');
 insert into RidicskeOpravneni values ('EO hehehe', 'B1');
+
 insert into RidicskeOpravneni values ('EU hohoho', 'C1E');
 insert into RidicskeOpravneni values ('EU hohoho', 'D');
 insert into RidicskeOpravneni values ('EU hohoho', 'T');
@@ -327,5 +328,11 @@ where rodne_cislo_ridice in
        where kategorie = 'Nejzavaznejsi');
 
 
-/* Najdi vsechny prestupky, ktere byly spachany ridicem, ktery vlastni vozidlo na hnede uhli */
+/* Najdi vsechny prestupky, ktere byly spachany ridici, kteri vlastni vozidlo/a na hnede uhli */
+select kategorie, druh, jmeno_prijmeni, palivo
+from Prestupek p, Ridic r, NekradeneVozidlo v
+where p.rodne_cislo_ridice = r.rodne_cislo_ridice and
+      r.rodne_cislo_ridice = v.rodne_cislo_vlastnika and
+      v.palivo = 'hnede uhli'
+
 
