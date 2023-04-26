@@ -333,6 +333,68 @@ select kategorie, druh, jmeno_prijmeni, palivo
 from Prestupek p, Ridic r, NekradeneVozidlo v
 where p.rodne_cislo_ridice = r.rodne_cislo_ridice and
       r.rodne_cislo_ridice = v.rodne_cislo_vlastnika and
-      v.palivo = 'hnede uhli'
+      v.palivo = 'hnede uhli';
 
+
+
+
+create or replace procedure Update_nekradene_na_kradene (vin_auta in char, datum_odciz in varchar, misto_odciz in varchar)
+is
+    vin_aut char(17);
+    datum_odc date;
+    misto_odc varchar(40);
+
+    vin_nekradeneho_auta char(17);
+begin
+    vin_aut := vin_auta;
+    datum_odc := to_date(datum_odciz, 'dd.mm.yyyy');
+    misto_odc := misto_odciz;
+
+    select VIN into vin_nekradeneho_auta from NekradeneVozidlo where VIN = vin_auta;
+
+
+end;
+
+
+
+
+
+SELECT USER FROM dual;
+-- Výpis rolí přiřazených přihlášenému uživateli (xstudent)
+SELECT * FROM USER_ROLE_PRIVS;
+-- Výpis jemu přímo přiřazených systémových práv
+SELECT * FROM USER_SYS_PRIVS;
+-- Výpis jemu přímo přiřazených práv k objektům
+SELECT * FROM USER_SYS_PRIVS;
+
+
+SELECT * FROM ALL_USERS;
+SELECT * FROM ALL_USERS where USERNAME = 'XKOUMA02';
+
+
+declare
+    var1 integer;
+begin
+    var1 := 42;
+    DBMS_OUTPUT.PUT_LINE(var1);
+end;
+/
+
+
+
+-- create or replace trigger Update_nekradene_na_kradene
+--     before insert on KradeneVozidlo
+-- declare
+--     vin_existuje exception;
+-- begin
+--     if exists(select VIN from NekradeneVozidlo where VIN = new.VIN) then
+--         raise vin_existuje;
+--     end if;
+--
+-- exception
+--     when vin_existuje then
+--         delete from NekradeneVozidlo where VIN = new.VIN;
+--         DBMS_OUTPUT.PUT_LINE('TRYGRR');
+-- end;
+-- /
 
