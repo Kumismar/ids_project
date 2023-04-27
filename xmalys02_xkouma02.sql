@@ -1,3 +1,6 @@
+-- drop trigger zakaz_rizeni_pres_body;
+-- drop trigger udeleni_zakazu_rizeni;
+
 drop table Prestupek cascade constraints;
 drop table Ridic cascade constraints;
 drop table RidicskyPrukaz cascade constraints;
@@ -15,7 +18,7 @@ create table Prestupek (
     vyse_bodu smallint check(vyse_bodu >= 0 and vyse_bodu <= 12),
     vyse_blokove_pokuty integer,
     vyse_pokuty_ve_spravnim_rizeni integer,
-    vyse_zakazu_rizeni smallint check(vyse_zakazu_rizeni >= 0),
+    vyse_zakazu_rizeni smallint check(vyse_zakazu_rizeni >= 0), /*v mesicich*/
 
     /**/
     constraint pokuty_check check(vyse_blokove_pokuty >= 0 and vyse_pokuty_ve_spravnim_rizeni >= 0),
@@ -335,50 +338,201 @@ where p.rodne_cislo_ridice = r.rodne_cislo_ridice and
       r.rodne_cislo_ridice = v.rodne_cislo_vlastnika and
       v.palivo = 'hnede uhli';
 
+commit;
 
 
 
+
+-------------------
+-- 4. cast projektu
+-------------------
+
+-- Procedura vynuluje body vsem lidem z Adamova, kteri jeste nemaji 12 bodu.
+create or replace procedure vynuluj_adamov
+is
+    cursor lidi_z_adamova is select * from Ridic where misto_narozeni = 'Adamov';
+    rec Ridic%rowtype;
+begin
+--     open lidi_z_adamova;
+    for rec in lidi_z_adamova loop
+        if rec.pocet_bodu < 12 then
+--             DBMS_OUTPUT.PUT_LINE(rec.pocet_bodu || ' beztak Uwe Filter zas');
+            update Ridic set pocet_bodu = 0 where rodne_cislo_ridice = rec.rodne_cislo_ridice;
+        end if;
+    end loop;
+end;
+/
+
+--ridici z adamova pred
+select * from Ridic where misto_narozeni = 'Adamov';
+
+begin
+    vynuluj_adamov();
+end;
+/
+
+--ridici z adamova po
+select * from Ridic where misto_narozeni = 'Adamov';
+
+rollback;
+
+
+
+
+-- Procedura podle VINu najde v tabulce nekradenych vozidel vozidlo, a premisti ho do tabulky kradenych vozidel
 create or replace procedure Update_nekradene_na_kradene (vin_auta in char, datum_odciz in varchar, misto_odciz in varchar)
 is
     vin_aut char(17);
     datum_odc date;
     misto_odc varchar(40);
 
-    vin_nekradeneho_auta char(17);
+    spz_nekrad NekradeneVozidlo.SPZ%type;
+    typ NekradeneVozidlo.typ_vozidla%type;
+    vyrob NekradeneVozidlo.vyrobce%type;
+    rok_vyr NekradeneVozidlo.rok_vyroby%type;
+    model_voz NekradeneVozidlo.model%type;
+    barva_voz NekradeneVozidlo.barva%type;
+    razeni_voz NekradeneVozidlo.razeni%type;
+
+    rodne_c_vlastnika NekradeneVozidlo.rodne_cislo_vlastnika%type;
+
 begin
     vin_aut := vin_auta;
     datum_odc := to_date(datum_odciz, 'dd.mm.yyyy');
     misto_odc := misto_odciz;
 
-    select VIN into vin_nekradeneho_auta from NekradeneVozidlo where VIN = vin_auta;
+    select SPZ, typ_vozidla, vyrobce, model, rok_vyroby, barva, razeni, rodne_cislo_vlastnika
+    into spz_nekrad, typ, vyrob, model_voz, rok_vyr, barva_voz, razeni_voz, rodne_c_vlastnika
+    from NekradeneVozidlo where VIN = vin_auta;
 
+    delete from NekradeneVozidlo where VIN = vin_aut;
 
-end;
-
-
-
-
-
-SELECT USER FROM dual;
--- Výpis rolí přiřazených přihlášenému uživateli (xstudent)
-SELECT * FROM USER_ROLE_PRIVS;
--- Výpis jemu přímo přiřazených systémových práv
-SELECT * FROM USER_SYS_PRIVS;
--- Výpis jemu přímo přiřazených práv k objektům
-SELECT * FROM USER_SYS_PRIVS;
-
-
-SELECT * FROM ALL_USERS;
-SELECT * FROM ALL_USERS where USERNAME = 'XKOUMA02';
-
-
-declare
-    var1 integer;
-begin
-    var1 := 42;
-    DBMS_OUTPUT.PUT_LINE(var1);
+    insert into KradeneVozidlo
+    values (vin_aut, spz_nekrad, typ, vyrob, model_voz, rok_vyr, barva_voz, razeni_voz, datum_odc, misto_odc, rodne_c_vlastnika);
+--     DBMS_OUTPUT.PUT_LINE(vin_aut);
+--     DBMS_OUTPUT.PUT_LINE(spz_nekrad);
+--     DBMS_OUTPUT.PUT_LINE(razeni_voz);
+exception
+when NO_DATA_FOUND then
+    DBMS_OUTPUT.PUT_LINE('Vozidlo neni v databazi');
 end;
 /
+
+--nekradene pred
+select * from NekradeneVozidlo
+where VIN = '4Y1SL65848Z411439';
+--kradene pred
+select * from KradeneVozidlo
+where VIN = '4Y1SL65848Z411439';
+
+begin
+    Update_nekradene_na_kradene ('4Y1SL65848Z411439', '6.8.2000', 'Adamov');
+end;
+/
+
+--nekradene po
+select * from NekradeneVozidlo
+where VIN = '4Y1SL65848Z411439';
+--kradene po
+select * from KradeneVozidlo
+where VIN = '4Y1SL65848Z411439';
+
+rollback;
+
+
+
+-- triggrrrrrrrrrrrrrrrrrrrrrr
+-- drop trigger zakaz_rizeni_pres_body;
+--drop trigger udeleni_zakazu_rizeni;
+
+create or replace trigger udeleni_zakazu_rizeni
+after insert on Prestupek
+for each row
+when (new.vyse_zakazu_rizeni > 0)
+declare
+    datum char(10);
+begin
+    datum := to_char(sysdate, 'DD-MM-YYYY');
+    DBMS_OUTPUT.PUT_LINE('brasko');
+--     DBMS_OUTPUT.PUT_LINE(:new.druh);
+--     DBMS_OUTPUT.PUT_LINE(datum);
+--     DBMS_OUTPUT.PUT_LINE(sysdate - 1); --muzem odecist jeden den. husty
+    update RidicskyPrukaz set datum_platnosti = to_date(datum, 'DD-MM-YYYY')
+    where rodne_cislo_ridice = :new.rodne_cislo_ridice;
+end;
+/
+commit;
+
+--pred odebranim
+select * from RidicskyPrukaz where rodne_cislo_ridice = '660101/0112';
+
+-- Uwe Filter dostal zakaz rizeni na 2 mesice
+insert into Prestupek
+values (seq_id_prestupek.nextval, 'Nejzavaznejsi', 'Zabil v lese jelena bez nenavisti', 2, 200, 0, 2, '660101/0112');
+
+--po odebrani
+select * from RidicskyPrukaz where rodne_cislo_ridice = '660101/0112';
+
+rollback;
+
+
+
+create or replace trigger zakaz_rizeni_pres_body
+after update of pocet_bodu on Ridic
+for each row
+when (new.pocet_bodu = 12)
+declare
+    datum char(10);
+begin
+    datum := to_char(sysdate, 'DD-MM-YYYY');
+--     DBMS_OUTPUT.PUT_LINE('brasko ten dojel');
+    update RidicskyPrukaz set datum_platnosti = to_date(datum, 'DD-MM-YYYY')
+    where rodne_cislo_ridice = :new.rodne_cislo_ridice;
+end;
+/
+
+commit;
+
+--pred
+select * from RidicskyPrukaz where rodne_cislo_ridice = '020202/2020';
+
+--chtelo by to proceduru na pridavani bodu. mozna pridat a zavolat z prvniho triggeru
+update Ridic set pocet_bodu = 12
+where rodne_cislo_ridice = '020202/2020';
+
+--po
+select * from RidicskyPrukaz where rodne_cislo_ridice = '020202/2020';
+rollback ;
+
+
+
+
+
+
+
+
+
+
+-- SELECT USER FROM dual;
+-- -- Výpis rolí přiřazených přihlášenému uživateli (xstudent)
+-- SELECT * FROM USER_ROLE_PRIVS;
+-- -- Výpis jemu přímo přiřazených systémových práv
+-- SELECT * FROM USER_SYS_PRIVS;
+-- -- Výpis jemu přímo přiřazených práv k objektům
+-- SELECT * FROM USER_SYS_PRIVS;
+--
+--
+-- SELECT * FROM ALL_USERS;
+-- SELECT * FROM ALL_USERS where USERNAME = 'XKOUMA02';
+--
+--
+-- declare
+--     var1 integer;
+-- begin
+--     var1 := 42;
+--     DBMS_OUTPUT.PUT_LINE(var1);
+-- end;
+-- /
 
 
 
