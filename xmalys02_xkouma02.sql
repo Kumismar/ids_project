@@ -505,8 +505,15 @@ select * from RidicskyPrukaz where rodne_cislo_ridice = '020202/2020';
 rollback ;
 
 
-
-
+select SPZ, typ_vozidla, vyrobce, model, rok_vyroby,
+    case
+    when rok_vyroby < 1885
+        then 'stare'
+    when rok_vyroby > 2023
+        then 'husty'
+    else 'aktualni'
+    end as novota
+from NekradeneVozidlo;
 
 
 
