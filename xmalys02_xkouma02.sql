@@ -518,15 +518,16 @@ select SPZ, typ_vozidla, vyrobce, model, rok_vyroby,
 from NekradeneVozidlo;
 
 
+/* Kolik ridicskych opravneni ma Andrea Lmaoxdova? */
+
 /* Pred indexem */
 explain plan for
-select jmeno_prijmeni, typ_opravneni
+select jmeno_prijmeni, count(typ_opravneni)
 from Ridic r, RidicskeOpravneni ro, RidicskyPrukaz rp
 where r.rodne_cislo_ridice = rp.rodne_cislo_ridice and
       rp.cislo_ridicskeho_prukazu = ro.cislo_ridicskeho_prukazu and
       r.jmeno_prijmeni = 'Andrea Lmaoxdova'
-group by jmeno_prijmeni, typ_opravneni
-order by typ_opravneni;
+group by jmeno_prijmeni;
 
 select plan_table_output
 from table(DBMS_XPLAN.DISPLAY());
@@ -536,13 +537,12 @@ on Ridic(jmeno_prijmeni);
 
 /* Po indexu */
 explain plan for
-select jmeno_prijmeni, typ_opravneni
+select jmeno_prijmeni, count(typ_opravneni)
 from Ridic r, RidicskeOpravneni ro, RidicskyPrukaz rp
-where r.jmeno_prijmeni = 'Andrea Lmaoxdova' and
-      r.rodne_cislo_ridice = rp.rodne_cislo_ridice and
-      rp.cislo_ridicskeho_prukazu = ro.cislo_ridicskeho_prukazu
-group by jmeno_prijmeni, typ_opravneni
-order by typ_opravneni;
+where r.rodne_cislo_ridice = rp.rodne_cislo_ridice and
+        rp.cislo_ridicskeho_prukazu = ro.cislo_ridicskeho_prukazu and
+        r.jmeno_prijmeni = 'Andrea Lmaoxdova'
+group by jmeno_prijmeni;
 
 select plan_table_output
 from table(DBMS_XPLAN.DISPLAY());
