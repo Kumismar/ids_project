@@ -518,7 +518,7 @@ select SPZ, typ_vozidla, vyrobce, model, rok_vyroby,
 from NekradeneVozidlo;
 
 
-/* Kolik ridicskych opravneni ma Andrea Lmaoxdova? */
+/* Kolik ridicskych opravneni ma Andrea Lmaoxdova a Uwe Filter? */
 
 /* Pred indexem */
 explain plan for
@@ -526,7 +526,7 @@ select jmeno_prijmeni, count(typ_opravneni)
 from Ridic r, RidicskeOpravneni ro, RidicskyPrukaz rp
 where r.rodne_cislo_ridice = rp.rodne_cislo_ridice and
       rp.cislo_ridicskeho_prukazu = ro.cislo_ridicskeho_prukazu and
-      r.jmeno_prijmeni = 'Andrea Lmaoxdova'
+      (r.jmeno_prijmeni = 'Andrea Lmaoxdova' or r.jmeno_prijmeni = 'Uwe Filter')
 group by jmeno_prijmeni;
 
 select plan_table_output
@@ -535,13 +535,21 @@ from table(DBMS_XPLAN.DISPLAY());
 create index jmeno_prijmeni_i
 on Ridic(jmeno_prijmeni);
 
-/* Po indexu */
+/* Po indexu
+
+   Zlepseni spociva v tom, ze sloupec 'jmeno_prijmeni' nyni muzeme cist primo,
+   diky indexu jej mame primo ulozeny v pameti a muzeme jej i indexovat. Predtim
+   by bylo mozne pristoupit pouze pres 'rodne_cislo_ridice', ktery je primarnim klicem
+   tabulky a ty jsou do pameti ulozeny vzdy (protoze PK se vzdy musi dat indexovat).
+   Na nasi male databazi to zlepseni neni skoro zadne; nicmene pri velkem obsahu dat
+   by i takovyto index udelal docela velky rozdil ve vyhledavani.
+*/
 explain plan for
 select jmeno_prijmeni, count(typ_opravneni)
 from Ridic r, RidicskeOpravneni ro, RidicskyPrukaz rp
 where r.rodne_cislo_ridice = rp.rodne_cislo_ridice and
         rp.cislo_ridicskeho_prukazu = ro.cislo_ridicskeho_prukazu and
-        r.jmeno_prijmeni = 'Andrea Lmaoxdova'
+        (r.jmeno_prijmeni = 'Andrea Lmaoxdova' or r.jmeno_prijmeni = 'Uwe Filter')
 group by jmeno_prijmeni;
 
 select plan_table_output
