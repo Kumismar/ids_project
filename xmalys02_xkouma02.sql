@@ -11,6 +11,8 @@ drop table TypRidicskehoOpravneni cascade constraints;
 
 drop sequence seq_id_prestupek;
 
+drop index jmeno_prijmeni_i;
+
 create table Prestupek (
     ID_prestupku integer,
     kategorie varchar(30),
@@ -516,9 +518,34 @@ select SPZ, typ_vozidla, vyrobce, model, rok_vyroby,
 from NekradeneVozidlo;
 
 
+/* Pred indexem */
+explain plan for
+select jmeno_prijmeni, typ_opravneni
+from Ridic r, RidicskeOpravneni ro, RidicskyPrukaz rp
+where r.rodne_cislo_ridice = rp.rodne_cislo_ridice and
+      rp.cislo_ridicskeho_prukazu = ro.cislo_ridicskeho_prukazu and
+      r.jmeno_prijmeni = 'Andrea Lmaoxdova'
+group by jmeno_prijmeni, typ_opravneni
+order by typ_opravneni;
 
+select plan_table_output
+from table(DBMS_XPLAN.DISPLAY());
 
+create index jmeno_prijmeni_i
+on Ridic(jmeno_prijmeni);
 
+/* Po indexu */
+explain plan for
+select jmeno_prijmeni, typ_opravneni
+from Ridic r, RidicskeOpravneni ro, RidicskyPrukaz rp
+where r.jmeno_prijmeni = 'Andrea Lmaoxdova' and
+      r.rodne_cislo_ridice = rp.rodne_cislo_ridice and
+      rp.cislo_ridicskeho_prukazu = ro.cislo_ridicskeho_prukazu
+group by jmeno_prijmeni, typ_opravneni
+order by typ_opravneni;
+
+select plan_table_output
+from table(DBMS_XPLAN.DISPLAY());
 
 -- SELECT USER FROM dual;
 -- -- Výpis rolí přiřazených přihlášenému uživateli (xstudent)
