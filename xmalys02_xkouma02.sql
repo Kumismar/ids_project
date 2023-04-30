@@ -1,17 +1,18 @@
 -- drop trigger zakaz_rizeni_pres_body;
 -- drop trigger udeleni_zakazu_rizeni;
+-- drop index jmeno_prijmeni_i;
 
-drop table Prestupek cascade constraints;
-drop table Ridic cascade constraints;
-drop table RidicskyPrukaz cascade constraints;
-drop table KradeneVozidlo cascade constraints;
-drop table NekradeneVozidlo cascade constraints;
-drop table RidicskeOpravneni cascade constraints;
-drop table TypRidicskehoOpravneni cascade constraints;
-
-drop sequence seq_id_prestupek;
-
-drop index jmeno_prijmeni_i;
+-- drop table Prestupek cascade constraints;
+-- drop table Ridic cascade constraints;
+-- drop table RidicskyPrukaz cascade constraints;
+-- drop table KradeneVozidlo cascade constraints;
+-- drop table NekradeneVozidlo cascade constraints;
+-- drop table RidicskeOpravneni cascade constraints;
+-- drop table TypRidicskehoOpravneni cascade constraints;
+--
+-- drop materialized view Kriminalka;
+--
+-- drop sequence seq_id_prestupek;
 
 create table Prestupek (
     ID_prestupku integer,
@@ -144,6 +145,39 @@ create sequence seq_id_prestupek
     increment by 1
     nocache;
 
+
+create materialized view Kriminalka
+refresh on commit as
+    select * from Prestupek where kategorie = 'Zavazne' or kategorie = 'Nejzavaznejsi' or kategorie = 'Velky spatny';
+
+
+/* Prava pro kolegu Koumara z kriminalky */
+grant all on Ridic to XKOUMA02;
+grant all on NekradeneVozidlo to XKOUMA02;
+grant all on KradeneVozidlo to XKOUMA02;
+grant all on RidicskyPrukaz to XKOUMA02;
+grant all on RidicskeOpravneni to XKOUMA02;
+grant all on TypRidicskehoOpravneni to XKOUMA02;
+grant all on seq_id_prestupek to XKOUMA02;
+
+grant insert on Prestupek to XKOUMA02;
+grant all on Kriminalka to XKOUMA02;
+
+-- revoke all on Prestupek from XKOUMA02;
+-- revoke all on Kriminalka from XKOUMA02;
+--
+-- revoke all on Ridic from XKOUMA02;
+-- revoke all on NekradeneVozidlo from XKOUMA02;
+-- revoke all on KradeneVozidlo from XKOUMA02;
+-- revoke all on RidicskyPrukaz from XKOUMA02;
+-- revoke all on RidicskeOpravneni from XKOUMA02;
+-- revoke all on TypRidicskehoOpravneni from XKOUMA02;
+-- revoke all on seq_id_prestupek from XKOUMA02;
+
+/* Prava pro kriminalku */
+select * from TABLE_PRIVILEGES where GRANTEE = 'XKOUMA02';
+
+
 /**
   Casto jsou hodnoty nami insertovane do tabulek dosti nerealne. Chteli jsme si jen zprijemnit praci a
   trochu se u toho zasmat. Rikali jsme si, ze to jsou jen "demo data", tak doufame, ze to nebude vadit.
@@ -157,7 +191,7 @@ values ('660101/0112', 'Uwe Filter', to_date('10.4.1620', 'dd.mm.yyyy'), 'jine',
 insert into Ridic
 values ('020202/2020', 'Patrik Nejezrohlik', to_date('22.4.1973', 'dd.mm.yyyy'), 'muz', 11, 'svk', 'Budapest');
 insert into Ridic
-values ('020412/9371', 'Honza Zeleny', to_date('22.4.1966', 'dd.mm.yyyy'), 'muz', 0, 'cze', 'As');
+values ('020412/9371', 'Majk JePan', to_date('22.4.1966', 'dd.mm.yyyy'), 'muz', 0, 'cze', 'As');
 insert into Ridic
 values ('641108/4783', 'Petr Bezejmenny', to_date('22.4.1999', 'dd.mm.yyyy'), 'muz', 4, 'cze', 'Adamov');
 insert into Ridic
@@ -358,14 +392,13 @@ begin
 --     open lidi_z_adamova;
     for rec in lidi_z_adamova loop
         if rec.pocet_bodu < 12 then
---             DBMS_OUTPUT.PUT_LINE(rec.pocet_bodu || ' beztak Uwe Filter zas');
             update Ridic set pocet_bodu = 0 where rodne_cislo_ridice = rec.rodne_cislo_ridice;
         end if;
     end loop;
 end;
 /
 
---ridici z adamova pred
+--ridici z adamova pred vynulovanim
 select * from Ridic where misto_narozeni = 'Adamov';
 
 begin
@@ -373,7 +406,7 @@ begin
 end;
 /
 
---ridici z adamova po
+--ridici z adamova po vynulovani
 select * from Ridic where misto_narozeni = 'Adamov';
 
 rollback;
@@ -420,10 +453,10 @@ when NO_DATA_FOUND then
 end;
 /
 
---nekradene pred
+--vozidlo v tabulce nekradene pred
 select * from NekradeneVozidlo
 where VIN = '4Y1SL65848Z411439';
---kradene pred
+--vozidlo v tabulce kradene pred
 select * from KradeneVozidlo
 where VIN = '4Y1SL65848Z411439';
 
@@ -432,10 +465,10 @@ begin
 end;
 /
 
---nekradene po
+--vozidlo v tabulce nekradene po
 select * from NekradeneVozidlo
 where VIN = '4Y1SL65848Z411439';
---kradene po
+--vozidlo v tabulce kradene po
 select * from KradeneVozidlo
 where VIN = '4Y1SL65848Z411439';
 
@@ -443,9 +476,7 @@ rollback;
 
 
 
--- triggrrrrrrrrrrrrrrrrrrrrrr
--- drop trigger zakaz_rizeni_pres_body;
---drop trigger udeleni_zakazu_rizeni;
+-- triggery
 
 create or replace trigger udeleni_zakazu_rizeni
 after insert on Prestupek
@@ -456,23 +487,20 @@ declare
 begin
     datum := to_char(sysdate, 'DD-MM-YYYY');
     DBMS_OUTPUT.PUT_LINE('brasko');
---     DBMS_OUTPUT.PUT_LINE(:new.druh);
---     DBMS_OUTPUT.PUT_LINE(datum);
---     DBMS_OUTPUT.PUT_LINE(sysdate - 1); --muzem odecist jeden den. husty
     update RidicskyPrukaz set datum_platnosti = to_date(datum, 'DD-MM-YYYY')
     where rodne_cislo_ridice = :new.rodne_cislo_ridice;
 end;
 /
 commit;
 
---pred odebranim
+--pred udelenim zakazu rizeni
 select * from RidicskyPrukaz where rodne_cislo_ridice = '660101/0112';
 
 -- Uwe Filter dostal zakaz rizeni na 2 mesice
 insert into Prestupek
 values (seq_id_prestupek.nextval, 'Nejzavaznejsi', 'Zabil v lese jelena bez nenavisti', 2, 200, 0, 2, '660101/0112');
 
---po odebrani
+--po udeleni zakazu rizeni
 select * from RidicskyPrukaz where rodne_cislo_ridice = '660101/0112';
 
 rollback;
@@ -495,25 +523,26 @@ end;
 
 commit;
 
---pred
+--pred ziskanim 12 bodu
 select * from RidicskyPrukaz where rodne_cislo_ridice = '020202/2020';
 
 --chtelo by to proceduru na pridavani bodu. mozna pridat a zavolat z prvniho triggeru
 update Ridic set pocet_bodu = 12
 where rodne_cislo_ridice = '020202/2020';
 
---po
+--po ziskani 12 bodu
 select * from RidicskyPrukaz where rodne_cislo_ridice = '020202/2020';
 rollback ;
 
 
-select SPZ, typ_vozidla, vyrobce, model, rok_vyroby,
+-- Case select
+select SPZ, typ_vozidla, vyrobce, model, --rok_vyroby,
     case
     when rok_vyroby < 1885
-        then 'stare'
+        then 'Zvire'
     when rok_vyroby > 2023
-        then 'husty'
-    else 'aktualni'
+        then 'DeLorean'
+    else 'Aktualni'
     end as novota
 from NekradeneVozidlo;
 
@@ -555,42 +584,17 @@ group by jmeno_prijmeni;
 select plan_table_output
 from table(DBMS_XPLAN.DISPLAY());
 
--- SELECT USER FROM dual;
--- -- Výpis rolí přiřazených přihlášenému uživateli (xstudent)
--- SELECT * FROM USER_ROLE_PRIVS;
--- -- Výpis jemu přímo přiřazených systémových práv
--- SELECT * FROM USER_SYS_PRIVS;
--- -- Výpis jemu přímo přiřazených práv k objektům
--- SELECT * FROM USER_SYS_PRIVS;
---
---
--- SELECT * FROM ALL_USERS;
--- SELECT * FROM ALL_USERS where USERNAME = 'XKOUMA02';
---
---
--- declare
---     var1 integer;
--- begin
---     var1 := 42;
---     DBMS_OUTPUT.PUT_LINE(var1);
--- end;
--- /
 
 
 
--- create or replace trigger Update_nekradene_na_kradene
---     before insert on KradeneVozidlo
--- declare
---     vin_existuje exception;
--- begin
---     if exists(select VIN from NekradeneVozidlo where VIN = new.VIN) then
---         raise vin_existuje;
---     end if;
---
--- exception
---     when vin_existuje then
---         delete from NekradeneVozidlo where VIN = new.VIN;
---         DBMS_OUTPUT.PUT_LINE('TRYGRR');
--- end;
--- /
+-- Materializovany pohled kriminalky (XKOUMA02)
+-- Kriminalka pred
+select * from Kriminalka;
+
+insert into Prestupek
+values (seq_id_prestupek.nextval, 'Nejzavaznejsi', 'Parkovani na chodniku', 10, 0, 20000, 3, '020412/9371');
+commit;
+
+-- Kriminalka po
+select * from Kriminalka;
 
