@@ -1,7 +1,3 @@
--- drop trigger zakaz_rizeni_pres_body;
--- drop trigger udeleni_zakazu_rizeni;
--- drop index jmeno_prijmeni_i;
-
 -- drop table Prestupek cascade constraints;
 -- drop table Ridic cascade constraints;
 -- drop table RidicskyPrukaz cascade constraints;
@@ -13,6 +9,7 @@
 -- drop materialized view Kriminalka;
 --
 -- drop sequence seq_id_prestupek;
+
 
 create table Prestupek (
     ID_prestupku integer,
@@ -151,18 +148,24 @@ refresh on commit as
     select * from Prestupek where kategorie = 'Zavazne' or kategorie = 'Nejzavaznejsi' or kategorie = 'Velky spatny';
 
 
-/* Prava pro kolegu Koumara z kriminalky */
-grant all on Ridic to XKOUMA02;
-grant all on NekradeneVozidlo to XKOUMA02;
-grant all on KradeneVozidlo to XKOUMA02;
-grant all on RidicskyPrukaz to XKOUMA02;
-grant all on RidicskeOpravneni to XKOUMA02;
-grant all on TypRidicskehoOpravneni to XKOUMA02;
-grant all on seq_id_prestupek to XKOUMA02;
-
-grant insert on Prestupek to XKOUMA02;
-grant all on Kriminalka to XKOUMA02;
-
+-- /* Prava pro kolegu Koumara z kriminalky */
+-- grant all on Ridic to XKOUMA02;
+-- grant all on NekradeneVozidlo to XKOUMA02;
+-- grant all on KradeneVozidlo to XKOUMA02;
+-- grant all on RidicskyPrukaz to XKOUMA02;
+-- grant all on RidicskeOpravneni to XKOUMA02;
+-- grant all on TypRidicskehoOpravneni to XKOUMA02;
+-- grant all on seq_id_prestupek to XKOUMA02;
+--
+-- grant insert on Prestupek to XKOUMA02;
+-- grant all on Kriminalka to XKOUMA02;
+--
+-- grant execute on vynuluj_adamov to XKOUMA02;
+-- grant execute on Update_nekradene_na_kradene to XKOUMA02;
+--
+-- revoke all on Update_nekradene_na_kradene from XKOUMA02;
+-- revoke all on vynuluj_adamov from XKOUMA02;
+--
 -- revoke all on Prestupek from XKOUMA02;
 -- revoke all on Kriminalka from XKOUMA02;
 --
