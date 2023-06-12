@@ -3,7 +3,7 @@ Project for database course on FIT BUT. Before you read it, please note that the
 
 Co-author: [Adam Malysák](https://github.com/SGMannis).
 
-Final Evaluation: 30/34.
+Final evaluation: 30/34.
 
 ## For FIT students who came for an inspiration
 Feel free to get inspired by our script as much as you like but remember, anything too much is bad.
